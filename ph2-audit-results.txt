@@ -1,0 +1,73 @@
+ODA PHASE 2 — SIGNAL PIPELINE AUDIT RESULTS
+============================================
+Date: 2026-05-04
+Symbol: BTCUSDT | Capital: $1,000 | Leverage: 3x | Risk: 2%
+Zone rebuild interval: 672 bars (weekly)
+Elapsed: 1927s (32.1 min)
+
+=== MONTHLY PIPELINE BREAKDOWN ===
+
+Month       Z/Rebld  NearPx  Engulf  PassRR  Signal   Trade
+------------------------------------------------------------
+2021-04       100.0    2194    6230     352     352      64
+2021-05       100.0    1422    4254     216     216      48
+2021-06       100.0       0       0       0       0       0
+2021-07       100.0       0       0       0       0       0
+2021-08       100.0       0       0       0       0       0
+2021-09       100.0       0       0       0       0       0
+2021-10       100.0       0       0       0       0       0
+2021-11       100.0       0       0       0       0       0
+2021-12       100.0       0       0       0       0       0
+[2022-01 through 2026-04 all same: 100.0 | 0 | 0 | 0 | 0 | 0]
+
+=== ENGULF REJECTION REASONS (all months) ===
+
+  Demand zones checked (near price): 3565
+    -> price_not_at_zone:     3154  (88.5% — price never reached zone boundary)
+    -> breakdown:               98  (2.7% — close below zone = breakdown, not rejection)
+    -> low_confidence:         133  (3.7% — engulf found but confidence < 0.5)
+  Supply zones checked (near price): 6919
+    -> price_not_at_zone:     6107  (88.3% — price never reached zone boundary)
+    -> breakout:               134  (1.9% — close above zone = breakout, not rejection)
+    -> low_confidence:         290  (4.2% — engulf found but confidence < 0.5)
+
+  Total engulf matched (signal returned): 568  (5.4% of 10,484 checks)
+
+=== CONFIDENCE COMPONENT CONTRIBUTIONS (all months) ===
+
+  close_direction contributed:     623 times
+  engulfs_prev contributed:        492 times
+  strong_body contributed:         333 times
+  wick_rejection contributed:      427 times
+  vol_surge contributed:           253 times
+  zone_score contributed:            3 times
+  (Total engulf checks where zone hit price: 10,484)
+
+=== DIAGNOSIS ===
+
+PRIMARY CAUSE: Zone Proximity (Zone Detection layer)
+  Pre-Jun 2021 avg zones/rebuild: 100.0
+  Post-May 2021 avg zones/rebuild: 100.0
+  Post-May 2021 bars with nearby zones: 0
+
+The zone detector finds 100 zones per rebuild consistently before and after
+May 2021. But NOT A SINGLE BAR after May 2021 has price within 1.5% of any
+zone boundary. The zones exist — they're just not where price is trading.
+
+This means:
+1. Zone detection ALGORITHM works (finds 100 zones consistently)
+2. Zone FRESHNESS is the problem — zones are detected on historical data
+   and never updated to track where price actually moves
+3. The signal engine, confidence threshold, and RR filter are NOT the
+   problem — they never get a chance to fire
+
+=== NEXT STEPS ===
+
+TASK-005 (zone rebuild optimziation — sliding window of last 2,000 bars
+per TF) should be elevated from P3 to P1. Current full-data rebuild
+produces zones on ALL historical data, most of which are irrelevant to
+current price. A sliding window would keep only zones near recent price.
+
+TASK-003 (on-chain features) might help zone detection identify
+institutionally relevant levels using OI delta, funding, and liquidation
+data — but only if the zone detection itself can adapt to market regime.
